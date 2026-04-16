@@ -28,6 +28,7 @@ function Index() {
         <HeroSection />
         <ServicesSection />
         <ReviewsSection />
+        <PriceSection />
         <ContactsSection />
       </main>
       <Footer />
