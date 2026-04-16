@@ -125,7 +125,7 @@ function LoginPage() {
               )}
 
               {success && (
-                <p className="rounded-lg bg-green-500/10 px-4 py-2 text-sm text-green-400">
+                <p className="rounded-lg bg-accent/10 px-4 py-2 text-sm text-accent">
                   {success}
                 </p>
               )}

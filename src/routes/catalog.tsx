@@ -179,8 +179,8 @@ function CatalogPage() {
                               {formatPrice(part.price)}
                             </span>
                             <div className="mt-1 flex items-center gap-1 text-xs text-green-400">
-                              <Check className="h-3 w-3" />
-                              В наличии
+                              <Check className="h-3 w-3 text-accent" />
+                              <span className="text-accent">В наличии</span>
                             </div>
                           </div>
                         </div>
