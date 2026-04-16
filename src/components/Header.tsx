@@ -21,6 +21,9 @@ export function Header() {
           <a href="#services" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Услуги
           </a>
+          <a href="#prices" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+            Цены
+          </a>
           <a href="#reviews" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Отзывы
           </a>
