@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Phone, MapPin, Clock } from "lucide-react";
+import { Phone, ShoppingBag, User, LogIn } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Header() {
+  const { user } = useAuth();
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -17,28 +20,50 @@ export function Header() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
-          <a href="#services" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+        <nav className="hidden items-center gap-6 md:flex">
+          <a href="/#services" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Услуги
           </a>
-          <a href="#prices" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+          <Link to="/catalog" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary [&.active]:text-primary">
+            Запчасти
+          </Link>
+          <a href="/#prices" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Цены
           </a>
-          <a href="#reviews" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+          <a href="/#reviews" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Отзывы
           </a>
-          <a href="#contacts" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+          <a href="/#contacts" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Контакты
           </a>
         </nav>
 
-        <a
-          href="tel:+77778747313"
-          className="hidden items-center gap-2 rounded-lg bg-gold-gradient px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 md:inline-flex"
-        >
-          <Phone className="h-4 w-4" />
-          Позвонить
-        </a>
+        <div className="hidden items-center gap-3 md:flex">
+          {user ? (
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/50"
+            >
+              <User className="h-4 w-4 text-primary" />
+              Кабинет
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/50"
+            >
+              <LogIn className="h-4 w-4 text-primary" />
+              Войти
+            </Link>
+          )}
+          <a
+            href="tel:+77778747313"
+            className="flex items-center gap-2 rounded-lg bg-gold-gradient px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Phone className="h-4 w-4" />
+            Позвонить
+          </a>
+        </div>
       </div>
     </header>
   );
