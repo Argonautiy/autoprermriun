@@ -381,3 +381,158 @@ function AdminPage() {
     </div>
   );
 }
+
+function CategoriesPanel({
+  categories,
+  parts,
+  onChange,
+}: {
+  categories: Category[];
+  parts: Part[];
+  onChange: () => void;
+}) {
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const create = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    setBusy(true);
+    const slug = slugify(name) || `cat-${Date.now()}`;
+    const maxOrder = Math.max(0, ...categories.map((_, i) => i + 1));
+    const { error } = await supabase
+      .from("parts_categories")
+      .insert({ name, slug, sort_order: maxOrder });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Категория создана");
+    setNewName("");
+    onChange();
+  };
+
+  const startEdit = (c: Category) => {
+    setEditingId(c.id);
+    setEditName(c.name);
+  };
+
+  const saveEdit = async (id: string) => {
+    const name = editName.trim();
+    if (!name) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("parts_categories")
+      .update({ name, slug: slugify(name) || `cat-${Date.now()}` })
+      .eq("id", id);
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Обновлено");
+    setEditingId(null);
+    onChange();
+  };
+
+  const remove = async (c: Category) => {
+    const count = parts.filter((p) => p.category_id === c.id).length;
+    if (count > 0) {
+      toast.error(`Нельзя удалить: в категории ${count} запчастей`);
+      return;
+    }
+    if (!confirm(`Удалить категорию «${c.name}»?`)) return;
+    const { error } = await supabase.from("parts_categories").delete().eq("id", c.id);
+    if (error) return toast.error(error.message);
+    toast.success("Удалено");
+    onChange();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border/50 bg-card p-4">
+        <Label className="mb-2 block">Новая категория</Label>
+        <div className="flex gap-2">
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Например: Аксессуары"
+            onKeyDown={(e) => e.key === "Enter" && create()}
+          />
+          <Button
+            onClick={create}
+            disabled={busy || !newName.trim()}
+            className="bg-gold-gradient text-primary-foreground"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-card">
+        <table className="w-full">
+          <thead className="border-b border-border/50 bg-muted/20 text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3">Название</th>
+              <th className="px-4 py-3">Slug</th>
+              <th className="px-4 py-3">Запчастей</th>
+              <th className="px-4 py-3 text-right">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((c) => {
+              const count = parts.filter((p) => p.category_id === c.id).length;
+              const isEditing = editingId === c.id;
+              return (
+                <tr key={c.id} className="border-b border-border/30 last:border-0 hover:bg-muted/10">
+                  <td className="px-4 py-3 text-sm font-medium text-foreground">
+                    {isEditing ? (
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && saveEdit(c.id)}
+                        autoFocus
+                      />
+                    ) : (
+                      c.name
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{c.slug}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{count}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      {isEditing ? (
+                        <>
+                          <Button size="sm" onClick={() => saveEdit(c.id)} disabled={busy}>
+                            Сохранить
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                            Отмена
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="icon" variant="ghost" onClick={() => startEdit(c)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => remove(c)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {categories.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  Категорий пока нет
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
