@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { Phone, ShoppingBag, User, LogIn } from "lucide-react";
+import { Phone, ShoppingBag, User, LogIn, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export function Header() {
   const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -39,6 +41,15 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-2 rounded-lg border border-primary/50 bg-primary/10 px-3 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              <Shield className="h-4 w-4" />
+              Админ
+            </Link>
+          )}
           {user ? (
             <Link
               to="/profile"
