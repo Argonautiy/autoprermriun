@@ -17,7 +17,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9а-яё\s-]/gi, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -184,20 +194,28 @@ function AdminPage() {
   return (
     <div className="min-h-screen bg-background pb-20 pt-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              Админ-панель
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Управление каталогом запчастей · {parts.length} товаров
-            </p>
-          </div>
-          <Button onClick={openCreate} className="bg-gold-gradient text-primary-foreground">
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить запчасть
-          </Button>
+        <div className="mb-8">
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Админ-панель
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Управление каталогом · {parts.length} товаров · {categories.length} категорий
+          </p>
         </div>
+
+        <Tabs defaultValue="parts" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="parts">Запчасти</TabsTrigger>
+            <TabsTrigger value="categories">Категории</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="parts">
+            <div className="mb-4 flex justify-end">
+              <Button onClick={openCreate} className="bg-gold-gradient text-primary-foreground">
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить запчасть
+              </Button>
+            </div>
 
         {loading ? (
           <div className="flex justify-center py-20">
