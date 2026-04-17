@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import * as LucideIcons from "lucide-react";
 import { Pencil, Trash2, Plus, X, ShieldAlert, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,7 +41,13 @@ type Category = {
   id: string;
   name: string;
   slug: string;
+  icon: string | null;
+  description: string | null;
 };
+
+const ICON_OPTIONS = [
+  "CarFront", "Cog", "Settings", "Zap", "CircleDot", "Lightbulb", "Droplets", "Package",
+] as const;
 
 type Part = {
   id: string;
@@ -90,7 +97,7 @@ function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     const [{ data: cats }, { data: prts }] = await Promise.all([
-      supabase.from("parts_categories").select("id,name,slug").order("sort_order"),
+      supabase.from("parts_categories").select("id,name,slug,icon,description").order("sort_order"),
       supabase.from("parts").select("*").order("name"),
     ]);
     setCategories(cats ?? []);
@@ -392,8 +399,12 @@ function CategoriesPanel({
   onChange: () => void;
 }) {
   const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState<string>("Package");
+  const [newDescription, setNewDescription] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [editIcon, setEditIcon] = useState<string>("Package");
+  const [editDescription, setEditDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
@@ -402,19 +413,27 @@ function CategoriesPanel({
     setBusy(true);
     const slug = slugify(name) || `cat-${Date.now()}`;
     const maxOrder = Math.max(0, ...categories.map((_, i) => i + 1));
-    const { error } = await supabase
-      .from("parts_categories")
-      .insert({ name, slug, sort_order: maxOrder });
+    const { error } = await supabase.from("parts_categories").insert({
+      name,
+      slug,
+      sort_order: maxOrder,
+      icon: newIcon,
+      description: newDescription.trim() || null,
+    });
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Категория создана");
     setNewName("");
+    setNewDescription("");
+    setNewIcon("Package");
     onChange();
   };
 
   const startEdit = (c: Category) => {
     setEditingId(c.id);
     setEditName(c.name);
+    setEditIcon(c.icon || "Package");
+    setEditDescription(c.description || "");
   };
 
   const saveEdit = async (id: string) => {
@@ -423,7 +442,12 @@ function CategoriesPanel({
     setBusy(true);
     const { error } = await supabase
       .from("parts_categories")
-      .update({ name, slug: slugify(name) || `cat-${Date.now()}` })
+      .update({
+        name,
+        slug: slugify(name) || `cat-${Date.now()}`,
+        icon: editIcon,
+        description: editDescription.trim() || null,
+      })
       .eq("id", id);
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -445,34 +469,67 @@ function CategoriesPanel({
     onChange();
   };
 
+  const renderIcon = (name: string | null) => {
+    const Icon = (LucideIcons as any)[name || "Package"] || LucideIcons.Package;
+    return <Icon className="h-4 w-4" />;
+  };
+
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-border/50 bg-card p-4">
-        <Label className="mb-2 block">Новая категория</Label>
-        <div className="flex gap-2">
+      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-4">
+        <div>
+          <Label className="mb-2 block">Название новой категории</Label>
           <Input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Например: Аксессуары"
-            onKeyDown={(e) => e.key === "Enter" && create()}
           />
-          <Button
-            onClick={create}
-            disabled={busy || !newName.trim()}
-            className="bg-gold-gradient text-primary-foreground"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить
-          </Button>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label className="mb-2 block">Иконка</Label>
+            <Select value={newIcon} onValueChange={setNewIcon}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ICON_OPTIONS.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    <span className="flex items-center gap-2">
+                      {renderIcon(name)}
+                      {name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="mb-2 block">Описание</Label>
+            <Input
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Краткое описание раздела"
+            />
+          </div>
+        </div>
+        <Button
+          onClick={create}
+          disabled={busy || !newName.trim()}
+          className="bg-gold-gradient text-primary-foreground"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Добавить категорию
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border/50 bg-card">
         <table className="w-full">
           <thead className="border-b border-border/50 bg-muted/20 text-left text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
+              <th className="px-4 py-3">Иконка</th>
               <th className="px-4 py-3">Название</th>
-              <th className="px-4 py-3">Slug</th>
+              <th className="px-4 py-3">Описание</th>
               <th className="px-4 py-3">Запчастей</th>
               <th className="px-4 py-3 text-right">Действия</th>
             </tr>
@@ -482,20 +539,53 @@ function CategoriesPanel({
               const count = parts.filter((p) => p.category_id === c.id).length;
               const isEditing = editingId === c.id;
               return (
-                <tr key={c.id} className="border-b border-border/30 last:border-0 hover:bg-muted/10">
+                <tr key={c.id} className="border-b border-border/30 last:border-0 hover:bg-muted/10 align-top">
+                  <td className="px-4 py-3 text-primary">
+                    {isEditing ? (
+                      <Select value={editIcon} onValueChange={setEditIcon}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ICON_OPTIONS.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              <span className="flex items-center gap-2">
+                                {renderIcon(name)}
+                                {name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      renderIcon(c.icon)
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium text-foreground">
                     {isEditing ? (
                       <Input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && saveEdit(c.id)}
                         autoFocus
                       />
                     ) : (
-                      c.name
+                      <>
+                        <div>{c.name}</div>
+                        <div className="text-xs text-muted-foreground">{c.slug}</div>
+                      </>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{c.slug}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground max-w-xs">
+                    {isEditing ? (
+                      <Input
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="Описание"
+                      />
+                    ) : (
+                      c.description || "—"
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{count}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
@@ -525,7 +615,7 @@ function CategoriesPanel({
             })}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   Категорий пока нет
                 </td>
               </tr>

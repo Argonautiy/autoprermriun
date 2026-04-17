@@ -4,10 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  CarFront, Cog, Settings, Zap, CircleDot, Lightbulb, Droplets,
-  Search, Package, Check, X,
-} from "lucide-react";
+import * as LucideIcons from "lucide-react";
+import { Search, Package, Check, X } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/catalog")({
@@ -20,9 +18,10 @@ export const Route = createFileRoute("/catalog")({
   component: CatalogPage,
 });
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  CarFront, Cog, Settings, Zap, CircleDot, Lightbulb, Droplets,
-};
+function getIcon(name: string | null) {
+  if (!name) return Package;
+  return ((LucideIcons as any)[name] as React.ComponentType<{ className?: string }>) || Package;
+}
 
 function CatalogPage() {
   const [categories, setCategories] = useState<Tables<"parts_categories">[]>([]);
@@ -102,7 +101,7 @@ function CatalogPage() {
               Все
             </button>
             {categories.map((cat) => {
-              const Icon = iconMap[cat.icon || ""] || Package;
+              const Icon = getIcon(cat.icon);
               return (
                 <button
                   key={cat.id}
