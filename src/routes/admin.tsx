@@ -217,61 +217,61 @@ function AdminPage() {
               </Button>
             </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-border/50 bg-card">
-            <table className="w-full">
-              <thead className="border-b border-border/50 bg-muted/20 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3">Название</th>
-                  <th className="px-4 py-3">Артикул</th>
-                  <th className="px-4 py-3">Категория</th>
-                  <th className="px-4 py-3">Цена</th>
-                  <th className="px-4 py-3">Наличие</th>
-                  <th className="px-4 py-3 text-right">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parts.map((p) => {
-                  const cat = categories.find((c) => c.id === p.category_id);
-                  return (
-                    <tr key={p.id} className="border-b border-border/30 last:border-0 hover:bg-muted/10">
-                      <td className="px-4 py-3 text-sm font-medium text-foreground">{p.name}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{p.article ?? "—"}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{cat?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-sm text-foreground">{p.price.toLocaleString("ru-RU")} ₸</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={p.in_stock ? "text-green-500" : "text-muted-foreground"}>
-                          {p.in_stock ? "В наличии" : "Нет"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(p)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border/50 bg-card">
+                <table className="w-full">
+                  <thead className="border-b border-border/50 bg-muted/20 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3">Название</th>
+                      <th className="px-4 py-3">Артикул</th>
+                      <th className="px-4 py-3">Категория</th>
+                      <th className="px-4 py-3">Цена</th>
+                      <th className="px-4 py-3">Наличие</th>
+                      <th className="px-4 py-3 text-right">Действия</th>
                     </tr>
-                  );
-                })}
-                {parts.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      Пока нет запчастей
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </thead>
+                  <tbody>
+                    {parts.map((p) => {
+                      const cat = categories.find((c) => c.id === p.category_id);
+                      return (
+                        <tr key={p.id} className="border-b border-border/30 last:border-0 hover:bg-muted/10">
+                          <td className="px-4 py-3 text-sm font-medium text-foreground">{p.name}</td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">{p.article ?? "—"}</td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">{cat?.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{p.price.toLocaleString("ru-RU")} ₸</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={p.in_stock ? "text-green-500" : "text-muted-foreground"}>
+                              {p.in_stock ? "В наличии" : "Нет"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDelete(p)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {parts.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                          Пока нет запчастей
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="categories">
