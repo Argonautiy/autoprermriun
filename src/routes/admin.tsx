@@ -272,6 +272,12 @@ function AdminPage() {
             </table>
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <CategoriesPanel categories={categories} parts={parts} onChange={loadData} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {showForm && (
