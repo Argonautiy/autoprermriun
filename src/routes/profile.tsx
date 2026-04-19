@@ -281,6 +281,49 @@ function ProfilePage() {
                 </div>
               )}
             </div>
+
+            {/* My repair orders */}
+            <div className="mt-6 rounded-2xl border border-border/50 bg-card p-6">
+              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-foreground">
+                <Wrench className="h-5 w-5 text-primary" />
+                Мои заказы на ремонт
+              </h2>
+              {orders.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  У вас пока нет заказов. Записаться на ремонт можно по телефону.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {orders.map((o) => (
+                    <div
+                      key={o.id}
+                      className="rounded-xl border border-border/50 bg-surface px-5 py-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-display text-sm font-semibold text-foreground">
+                            {o.car_make} {o.car_model}
+                            {o.car_year ? ` · ${o.car_year}` : ""}
+                          </p>
+                          {o.notes && (
+                            <p className="mt-1 text-xs text-muted-foreground">{o.notes}</p>
+                          )}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Создан: {new Date(o.created_at).toLocaleDateString("ru-RU")}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {statusBadge(o.status as RepairStatus)}
+                          <p className="text-sm font-semibold text-foreground">
+                            {Number(o.labor_cost).toLocaleString("ru-RU")} ₸
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         </div>
       </main>
