@@ -26,6 +26,7 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const [cars, setCars] = useState<Tables<"user_cars">[]>([]);
+  const [orders, setOrders] = useState<Tables<"repair_orders">[]>([]);
   const [showAddCar, setShowAddCar] = useState(false);
   const [newCar, setNewCar] = useState({ make: "", model: "", year: new Date().getFullYear() });
   const [editName, setEditName] = useState("");
@@ -34,9 +35,10 @@ function ProfilePage() {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [profRes, carsRes] = await Promise.all([
+    const [profRes, carsRes, ordersRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).single(),
       supabase.from("user_cars").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("repair_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
     ]);
     if (profRes.data) {
       setProfile(profRes.data);
@@ -44,6 +46,7 @@ function ProfilePage() {
       setEditPhone(profRes.data.phone || "");
     }
     if (carsRes.data) setCars(carsRes.data);
+    if (ordersRes.data) setOrders(ordersRes.data);
   }, [user]);
 
   useEffect(() => {
