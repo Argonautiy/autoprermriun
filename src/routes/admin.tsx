@@ -20,6 +20,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { OrdersPanel } from "@/components/admin/OrdersPanel";
+import { ServicesPanel } from "@/components/admin/ServicesPanel";
 
 function slugify(s: string) {
   return s
@@ -211,10 +213,20 @@ function AdminPage() {
         </div>
 
         <Tabs defaultValue="parts" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex-wrap">
+            <TabsTrigger value="orders">Заказы</TabsTrigger>
+            <TabsTrigger value="services">Услуги</TabsTrigger>
             <TabsTrigger value="parts">Запчасти</TabsTrigger>
             <TabsTrigger value="categories">Категории</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="orders">
+            <OrdersPanel />
+          </TabsContent>
+
+          <TabsContent value="services">
+            <ServicesPanel />
+          </TabsContent>
 
           <TabsContent value="parts">
             <div className="mb-4 flex justify-end">
