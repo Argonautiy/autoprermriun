@@ -212,7 +212,7 @@ function AdminPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="parts" className="w-full">
+        <Tabs defaultValue="orders" className="w-full">
           <TabsList className="mb-6 flex-wrap">
             <TabsTrigger value="orders">Заказы</TabsTrigger>
             <TabsTrigger value="services">Услуги</TabsTrigger>
