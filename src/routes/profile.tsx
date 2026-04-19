@@ -6,9 +6,10 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Car, Plus, Trash2, LogOut, User, Phone, Save, X,
+  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { statusBadge, type RepairStatus } from "@/components/admin/OrdersPanel";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
