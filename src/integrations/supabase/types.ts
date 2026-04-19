@@ -115,6 +115,146 @@ export type Database = {
         }
         Relationships: []
       }
+      repair_order_parts: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          part_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          part_id: string
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          part_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_order_parts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "repair_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repair_order_parts_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repair_orders: {
+        Row: {
+          assigned_master: string | null
+          car_make: string
+          car_model: string
+          car_plate: string | null
+          car_year: number | null
+          client_name: string
+          client_phone: string
+          created_at: string
+          estimated_completion: string | null
+          id: string
+          labor_cost: number
+          notes: string | null
+          scheduled_at: string | null
+          service_id: string | null
+          status: Database["public"]["Enums"]["repair_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_master?: string | null
+          car_make: string
+          car_model: string
+          car_plate?: string | null
+          car_year?: number | null
+          client_name: string
+          client_phone: string
+          created_at?: string
+          estimated_completion?: string | null
+          id?: string
+          labor_cost?: number
+          notes?: string | null
+          scheduled_at?: string | null
+          service_id?: string | null
+          status?: Database["public"]["Enums"]["repair_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_master?: string | null
+          car_make?: string
+          car_model?: string
+          car_plate?: string | null
+          car_year?: number | null
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          estimated_completion?: string | null
+          id?: string
+          labor_cost?: number
+          notes?: string | null
+          scheduled_at?: string | null
+          service_id?: string | null
+          status?: Database["public"]["Enums"]["repair_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_orders_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          base_price: number
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_cars: {
         Row: {
           created_at: string
@@ -178,6 +318,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      repair_status:
+        | "waiting_diagnosis"
+        | "waiting_price"
+        | "waiting_parts"
+        | "in_repair"
+        | "ready_for_pickup"
+        | "completed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -306,6 +454,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      repair_status: [
+        "waiting_diagnosis",
+        "waiting_price",
+        "waiting_parts",
+        "in_repair",
+        "ready_for_pickup",
+        "completed",
+        "cancelled",
+      ],
     },
   },
 } as const
