@@ -70,6 +70,7 @@ const probabilityLabels = {
 };
 
 function DiagnosticsPage() {
+  const { user } = useAuth();
   const [carMake, setCarMake] = useState("");
   const [carModel, setCarModel] = useState("");
   const [carYear, setCarYear] = useState("");
