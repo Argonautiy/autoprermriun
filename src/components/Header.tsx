@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Phone, ShoppingBag, User, LogIn, Shield } from "lucide-react";
+import { Phone, ShoppingBag, User, LogIn, Shield, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
@@ -28,6 +28,10 @@ export function Header() {
           </a>
           <Link to="/catalog" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary [&.active]:text-primary">
             Запчасти
+          </Link>
+          <Link to="/diagnostics" className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-primary [&.active]:text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            AI-диагностика
           </Link>
           <a href="/#prices" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
             Цены
