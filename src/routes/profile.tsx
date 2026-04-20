@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench,
+  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench, Sparkles, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, Trash,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { statusBadge, type RepairStatus } from "@/components/admin/OrdersPanel";
