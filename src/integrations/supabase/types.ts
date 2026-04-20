@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      diagnostics_history: {
+        Row: {
+          advice: string
+          car_make: string
+          car_model: string
+          car_year: string | null
+          causes: Json
+          created_at: string
+          id: string
+          recommended_services: Json
+          summary: string
+          symptoms: string
+          urgency: string
+          user_id: string | null
+        }
+        Insert: {
+          advice: string
+          car_make: string
+          car_model: string
+          car_year?: string | null
+          causes?: Json
+          created_at?: string
+          id?: string
+          recommended_services?: Json
+          summary: string
+          symptoms: string
+          urgency: string
+          user_id?: string | null
+        }
+        Update: {
+          advice?: string
+          car_make?: string
+          car_model?: string
+          car_year?: string | null
+          causes?: Json
+          created_at?: string
+          id?: string
+          recommended_services?: Json
+          summary?: string
+          symptoms?: string
+          urgency?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       parts: {
         Row: {
           article: string | null
