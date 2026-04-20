@@ -92,6 +92,12 @@ function ProfilePage() {
     setCars((prev) => prev.filter((c) => c.id !== id));
   };
 
+  const deleteDiagnostic = async (id: string) => {
+    await supabase.from("diagnostics_history").delete().eq("id", id);
+    setDiagnostics((prev) => prev.filter((d) => d.id !== id));
+    if (expandedDiag === id) setExpandedDiag(null);
+  };
+
   const handleLogout = async () => {
     await signOut();
     navigate({ to: "/" });
