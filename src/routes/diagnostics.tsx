@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { diagnose } from "@/server/diagnose";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/diagnostics")({
   head: () => ({
@@ -68,6 +70,7 @@ const probabilityLabels = {
 };
 
 function DiagnosticsPage() {
+  const { user } = useAuth();
   const [carMake, setCarMake] = useState("");
   const [carModel, setCarModel] = useState("");
   const [carYear, setCarYear] = useState("");
@@ -84,6 +87,22 @@ function DiagnosticsPage() {
         data: { carMake, carModel, carYear, symptoms },
       });
       setResult(res);
+
+      const { error: saveErr } = await supabase
+        .from("diagnostics_history")
+        .insert({
+          user_id: user?.id ?? null,
+          car_make: carMake,
+          car_model: carModel,
+          car_year: carYear || null,
+          symptoms,
+          urgency: res.urgency,
+          summary: res.summary,
+          causes: res.causes as never,
+          recommended_services: res.recommended_services as never,
+          advice: res.advice,
+        });
+      if (saveErr) console.error("Failed to save diagnostic:", saveErr);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Ошибка диагностики";
       toast.error(msg);

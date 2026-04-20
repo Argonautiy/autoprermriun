@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench,
+  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench, Sparkles, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, Trash,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { statusBadge, type RepairStatus } from "@/components/admin/OrdersPanel";
@@ -27,6 +27,8 @@ function ProfilePage() {
   const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const [cars, setCars] = useState<Tables<"user_cars">[]>([]);
   const [orders, setOrders] = useState<Tables<"repair_orders">[]>([]);
+  const [diagnostics, setDiagnostics] = useState<Tables<"diagnostics_history">[]>([]);
+  const [expandedDiag, setExpandedDiag] = useState<string | null>(null);
   const [showAddCar, setShowAddCar] = useState(false);
   const [newCar, setNewCar] = useState({ make: "", model: "", year: new Date().getFullYear() });
   const [editName, setEditName] = useState("");
@@ -35,10 +37,11 @@ function ProfilePage() {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [profRes, carsRes, ordersRes] = await Promise.all([
+    const [profRes, carsRes, ordersRes, diagRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).single(),
       supabase.from("user_cars").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("repair_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("diagnostics_history").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
     ]);
     if (profRes.data) {
       setProfile(profRes.data);
@@ -47,6 +50,7 @@ function ProfilePage() {
     }
     if (carsRes.data) setCars(carsRes.data);
     if (ordersRes.data) setOrders(ordersRes.data);
+    if (diagRes.data) setDiagnostics(diagRes.data);
   }, [user]);
 
   useEffect(() => {
@@ -86,6 +90,12 @@ function ProfilePage() {
   const deleteCar = async (id: string) => {
     await supabase.from("user_cars").delete().eq("id", id);
     setCars((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const deleteDiagnostic = async (id: string) => {
+    await supabase.from("diagnostics_history").delete().eq("id", id);
+    setDiagnostics((prev) => prev.filter((d) => d.id !== id));
+    if (expandedDiag === id) setExpandedDiag(null);
   };
 
   const handleLogout = async () => {
@@ -278,6 +288,113 @@ function ProfilePage() {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* My AI diagnostics history */}
+            <div className="mt-6 rounded-2xl border border-border/50 bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  История AI-диагностик
+                </h2>
+                <Link to="/diagnostics" className="text-xs font-medium text-primary hover:underline">
+                  + Новая диагностика
+                </Link>
+              </div>
+              {diagnostics.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Вы ещё не пользовались AI-диагностикой.{" "}
+                  <Link to="/diagnostics" className="text-primary hover:underline">Попробовать</Link>
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {diagnostics.map((d) => {
+                    const isOpen = expandedDiag === d.id;
+                    const urgencyMeta =
+                      d.urgency === "high"
+                        ? { label: "Срочно", color: "text-red-500", Icon: AlertTriangle }
+                        : d.urgency === "medium"
+                        ? { label: "Желательно скоро", color: "text-amber-500", Icon: Info }
+                        : { label: "Не срочно", color: "text-emerald-500", Icon: CheckCircle2 };
+                    const causes = (d.causes as Array<{ title: string; description: string; probability: string }>) ?? [];
+                    const services = (d.recommended_services as Array<{ id: string; name: string; base_price: number }>) ?? [];
+                    return (
+                      <div key={d.id} className="rounded-xl border border-border/50 bg-surface">
+                        <button
+                          onClick={() => setExpandedDiag(isOpen ? null : d.id)}
+                          className="flex w-full items-start justify-between gap-3 px-5 py-4 text-left"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-display text-sm font-semibold text-foreground">
+                                {d.car_make} {d.car_model}{d.car_year ? ` · ${d.car_year}` : ""}
+                              </p>
+                              <span className={`inline-flex items-center gap-1 text-xs font-medium ${urgencyMeta.color}`}>
+                                <urgencyMeta.Icon className="h-3 w-3" />
+                                {urgencyMeta.label}
+                              </span>
+                            </div>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">{d.summary}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {new Date(d.created_at).toLocaleString("ru-RU")}
+                            </p>
+                          </div>
+                          {isOpen ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        </button>
+                        {isOpen && (
+                          <div className="space-y-4 border-t border-border/50 px-5 py-4">
+                            <div>
+                              <p className="text-xs font-medium uppercase text-muted-foreground">Симптомы</p>
+                              <p className="mt-1 text-sm text-foreground/90">{d.symptoms}</p>
+                            </div>
+                            {causes.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium uppercase text-muted-foreground">Вероятные причины</p>
+                                <ul className="mt-2 space-y-2">
+                                  {causes.map((c, i) => (
+                                    <li key={i} className="rounded-lg border border-border/50 bg-card p-3">
+                                      <p className="text-sm font-semibold text-foreground">{c.title}</p>
+                                      <p className="mt-1 text-xs text-muted-foreground">{c.description}</p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {services.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium uppercase text-muted-foreground">Рекомендованные услуги</p>
+                                <ul className="mt-2 space-y-1.5">
+                                  {services.map((s) => (
+                                    <li key={s.id} className="flex items-center justify-between rounded-lg bg-card px-3 py-2 text-sm">
+                                      <span className="text-foreground">{s.name}</span>
+                                      <span className="font-semibold text-primary">
+                                        {Number(s.base_price).toLocaleString("ru-RU")} ₸
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                              <p className="text-xs font-medium uppercase text-primary">Совет AI</p>
+                              <p className="mt-1 text-sm text-foreground/90">{d.advice}</p>
+                            </div>
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => deleteDiagnostic(d.id)}
+                                className="flex items-center gap-1.5 rounded-lg border border-border/50 px-3 py-1.5 text-xs text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+                              >
+                                <Trash className="h-3.5 w-3.5" />
+                                Удалить
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
