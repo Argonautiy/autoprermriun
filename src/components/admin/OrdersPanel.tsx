@@ -367,6 +367,9 @@ export function OrdersPanel() {
         </Card>
       </div>
 
+      {/* Schedule */}
+      <ScheduleStrip orders={orders} services={services} />
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
