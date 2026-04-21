@@ -512,6 +512,31 @@ function BookingPage() {
                       placeholder="Дополнительные пожелания..."
                     />
                   </div>
+
+                  <div>
+                    <Label className="mb-1.5 flex items-center gap-1.5 text-xs">
+                      <Send className="h-3.5 w-3.5" />
+                      Telegram chat ID (опционально — для уведомления)
+                    </Label>
+                    <Input
+                      value={telegramChatId}
+                      onChange={(e) => setTelegramChatId(e.target.value)}
+                      placeholder="123456789"
+                      inputMode="numeric"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Узнать свой ID: напишите боту{" "}
+                      <a
+                        href="https://t.me/userinfobot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        @userinfobot
+                      </a>
+                      . Чтобы получить сообщение — сначала откройте чат с нашим ботом и нажмите Start.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
