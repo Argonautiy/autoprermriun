@@ -6,10 +6,14 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench, Sparkles, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, Trash,
+  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench, Sparkles, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, Trash, Calendar as CalendarIcon, XCircle, Clock,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { statusBadge, type RepairStatus } from "@/components/admin/OrdersPanel";
+import { format, addDays, startOfDay, isBefore, isSameDay } from "date-fns";
+import { ru } from "date-fns/locale";
+import { sendTelegramNotification } from "@/server/notify-telegram";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
