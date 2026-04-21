@@ -367,6 +367,9 @@ export function OrdersPanel() {
         </Card>
       </div>
 
+      {/* Schedule */}
+      <ScheduleStrip orders={orders} services={services} />
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
@@ -762,3 +765,108 @@ export function OrdersPanel() {
     </div>
   );
 }
+
+function ScheduleStrip({ orders, services }: { orders: Order[]; services: Service[] }) {
+  const [dayOffset, setDayOffset] = useState(0);
+
+  const day = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [dayOffset]);
+
+  const dayEnd = useMemo(() => {
+    const d = new Date(day);
+    d.setDate(d.getDate() + 1);
+    return d;
+  }, [day]);
+
+  const scheduled = useMemo(
+    () =>
+      orders
+        .filter(
+          (o) =>
+            o.scheduled_at &&
+            o.status !== "cancelled" &&
+            new Date(o.scheduled_at) >= day &&
+            new Date(o.scheduled_at) < dayEnd,
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime(),
+        ),
+    [orders, day, dayEnd],
+  );
+
+  const dayLabel = day.toLocaleDateString("ru-RU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-base font-semibold text-foreground">
+            Расписание
+          </h3>
+          <p className="text-xs capitalize text-muted-foreground">{dayLabel}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={() => setDayOffset((o) => o - 1)}>
+            ←
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setDayOffset(0)}
+            disabled={dayOffset === 0}
+          >
+            Сегодня
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setDayOffset((o) => o + 1)}>
+            →
+          </Button>
+        </div>
+      </div>
+
+      {scheduled.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          На этот день записей нет
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {scheduled.map((o) => {
+            const time = new Date(o.scheduled_at!).toLocaleTimeString("ru-RU", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const svc = services.find((s) => s.id === o.service_id);
+            return (
+              <div
+                key={o.id}
+                className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2"
+              >
+                <div className="flex h-12 w-16 flex-col items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <span className="font-display text-sm font-bold">{time}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {o.client_name} · {o.car_make} {o.car_model}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {svc?.name ?? "Без услуги"} · {o.client_phone}
+                  </p>
+                </div>
+                {statusBadge(o.status)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+

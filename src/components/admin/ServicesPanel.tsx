@@ -13,6 +13,7 @@ export type Service = {
   description: string | null;
   base_price: number;
   sort_order: number;
+  duration_minutes: number;
 };
 
 export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
@@ -22,11 +23,13 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
 
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
+  const [newDuration, setNewDuration] = useState("60");
   const [newDesc, setNewDesc] = useState("");
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("");
+  const [editDuration, setEditDuration] = useState("60");
   const [editDesc, setEditDesc] = useState("");
 
   const load = async () => {
@@ -50,6 +53,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
     const { error } = await supabase.from("services").insert({
       name: newName.trim(),
       base_price: parseFloat(newPrice) || 0,
+      duration_minutes: parseInt(newDuration, 10) || 60,
       description: newDesc.trim() || null,
       sort_order: items.length + 1,
     });
@@ -58,6 +62,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
     toast.success("Услуга создана");
     setNewName("");
     setNewPrice("");
+    setNewDuration("60");
     setNewDesc("");
     load();
     onChanged?.();
@@ -67,6 +72,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
     setEditId(s.id);
     setEditName(s.name);
     setEditPrice(String(s.base_price));
+    setEditDuration(String(s.duration_minutes ?? 60));
     setEditDesc(s.description ?? "");
   };
 
@@ -78,6 +84,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
       .update({
         name: editName.trim(),
         base_price: parseFloat(editPrice) || 0,
+        duration_minutes: parseInt(editDuration, 10) || 60,
         description: editDesc.trim() || null,
       })
       .eq("id", editId);
@@ -104,7 +111,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
         <h3 className="font-display text-base font-semibold text-foreground">
           Новая услуга
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <Label className="mb-2 block">Название *</Label>
             <Input
@@ -120,6 +127,15 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value)}
               placeholder="5000"
+            />
+          </div>
+          <div>
+            <Label className="mb-2 block">Длительность (мин)</Label>
+            <Input
+              type="number"
+              value={newDuration}
+              onChange={(e) => setNewDuration(e.target.value)}
+              placeholder="60"
             />
           </div>
         </div>
@@ -156,6 +172,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
                 <th className="px-4 py-3">Название</th>
                 <th className="px-4 py-3">Описание</th>
                 <th className="px-4 py-3">Цена</th>
+                <th className="px-4 py-3">Длит.</th>
                 <th className="px-4 py-3 text-right">Действия</th>
               </tr>
             </thead>
@@ -175,6 +192,14 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
                         value={editPrice}
                         onChange={(e) => setEditPrice(e.target.value)}
                         className="w-28"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Input
+                        type="number"
+                        value={editDuration}
+                        onChange={(e) => setEditDuration(e.target.value)}
+                        className="w-20"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -200,6 +225,9 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
                     <td className="px-4 py-3 text-sm text-foreground">
                       {Number(s.base_price).toLocaleString("ru-RU")} ₸
                     </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {s.duration_minutes ?? 60} мин
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <Button size="icon" variant="ghost" onClick={() => startEdit(s)}>
@@ -216,7 +244,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
               {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     Пока нет услуг
