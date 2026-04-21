@@ -95,6 +95,7 @@ function BookingPage() {
   const [carYear, setCarYear] = useState("");
   const [carPlate, setCarPlate] = useState("");
   const [notes, setNotes] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -174,6 +175,7 @@ function BookingPage() {
     if (!carMake.trim() || !carModel.trim()) return toast.error("Укажите марку и модель");
 
     setSubmitting(true);
+    const tgId = telegramChatId.trim() || null;
     const { error } = await supabase.from("repair_orders").insert({
       client_name: clientName.trim(),
       client_phone: clientPhone.trim(),
@@ -187,9 +189,33 @@ function BookingPage() {
       notes: notes.trim() || null,
       status: "waiting_diagnosis",
       user_id: user?.id ?? null,
+      telegram_chat_id: tgId,
     });
+    if (error) {
+      setSubmitting(false);
+      return toast.error(error.message);
+    }
+
+    if (tgId) {
+      const when = `${format(selectedSlot, "d MMMM, EEEE", { locale: ru })} в ${format(selectedSlot, "HH:mm")}`;
+      const message =
+        `<b>✅ Запись подтверждена — Авто Premium</b>\n\n` +
+        `🔧 Услуга: <b>${selectedService.name}</b>\n` +
+        `📅 Когда: <b>${when}</b>\n` +
+        `🚗 Авто: ${carMake.trim()} ${carModel.trim()}${carYear ? ` ${carYear}` : ""}\n` +
+        `💰 Стоимость: ~${Number(selectedService.base_price).toLocaleString("ru-RU")} ₸\n\n` +
+        (user
+          ? `Перенести или отменить запись можно в личном кабинете не позднее чем за 2 часа до начала.`
+          : `Перенос и отмена доступны после входа в личный кабинет — не позднее чем за 2 часа до начала.`);
+      try {
+        await sendTelegramNotification({ data: { chatId: tgId, message } });
+        toast.success("Подтверждение отправлено в Telegram");
+      } catch (e: any) {
+        toast.warning(`Запись создана, но Telegram не отправлен: ${e.message ?? e}`);
+      }
+    }
+
     setSubmitting(false);
-    if (error) return toast.error(error.message);
     setSuccess({ when: selectedSlot, service: selectedService.name });
   };
 
