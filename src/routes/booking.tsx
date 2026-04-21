@@ -525,7 +525,16 @@ function BookingPage() {
                       inputMode="numeric"
                     />
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      Узнать свой ID: напишите боту{" "}
+                      1) Откройте{" "}
+                      <a
+                        href="https://t.me/AutopremWork_bot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        @AutopremWork_bot
+                      </a>{" "}
+                      и нажмите Start. 2) Узнайте свой ID у{" "}
                       <a
                         href="https://t.me/userinfobot"
                         target="_blank"
@@ -533,8 +542,8 @@ function BookingPage() {
                         className="text-primary hover:underline"
                       >
                         @userinfobot
-                      </a>
-                      . Чтобы получить сообщение — сначала откройте чат с нашим ботом и нажмите Start.
+                      </a>{" "}
+                      и вставьте сюда.
                     </p>
                   </div>
                 </CardContent>
