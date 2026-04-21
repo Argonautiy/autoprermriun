@@ -38,6 +38,12 @@ function ProfilePage() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [reschedOrder, setReschedOrder] = useState<Tables<"repair_orders"> | null>(null);
+  const [reschedSlot, setReschedSlot] = useState<Date | null>(null);
+  const [reschedDate, setReschedDate] = useState<Date>(startOfDay(addDays(new Date(), 1)));
+  const [busy, setBusy] = useState<{ id: string; start: string; duration: number }[]>([]);
+  const [services, setServices] = useState<Record<string, { name: string; duration_minutes: number }>>({});
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
