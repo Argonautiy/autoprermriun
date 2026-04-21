@@ -533,40 +533,192 @@ function ProfilePage() {
               </h2>
               {orders.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  У вас пока нет заказов. Записаться на ремонт можно по телефону.
+                  У вас пока нет заказов.{" "}
+                  <Link to="/booking" className="text-primary hover:underline">Записаться онлайн</Link>
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {orders.map((o) => (
-                    <div
-                      key={o.id}
-                      className="rounded-xl border border-border/50 bg-surface px-5 py-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-display text-sm font-semibold text-foreground">
-                            {o.car_make} {o.car_model}
-                            {o.car_year ? ` · ${o.car_year}` : ""}
-                          </p>
-                          {o.notes && (
-                            <p className="mt-1 text-xs text-muted-foreground">{o.notes}</p>
-                          )}
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Создан: {new Date(o.created_at).toLocaleDateString("ru-RU")}
-                          </p>
+                  {orders.map((o) => {
+                    const modifiable = canModify(o);
+                    return (
+                      <div
+                        key={o.id}
+                        className="rounded-xl border border-border/50 bg-surface px-5 py-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-display text-sm font-semibold text-foreground">
+                              {o.car_make} {o.car_model}
+                              {o.car_year ? ` · ${o.car_year}` : ""}
+                            </p>
+                            {o.scheduled_at && (
+                              <p className="mt-1 flex items-center gap-1.5 text-xs text-primary">
+                                <CalendarIcon className="h-3.5 w-3.5" />
+                                {format(new Date(o.scheduled_at), "d MMMM, EEEE, в HH:mm", { locale: ru })}
+                              </p>
+                            )}
+                            {o.notes && (
+                              <p className="mt-1 text-xs text-muted-foreground">{o.notes}</p>
+                            )}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Создан: {new Date(o.created_at).toLocaleDateString("ru-RU")}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {statusBadge(o.status as RepairStatus)}
+                            <p className="text-sm font-semibold text-foreground">
+                              {Number(o.labor_cost).toLocaleString("ru-RU")} ₸
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {statusBadge(o.status as RepairStatus)}
-                          <p className="text-sm font-semibold text-foreground">
-                            {Number(o.labor_cost).toLocaleString("ru-RU")} ₸
-                          </p>
-                        </div>
+
+                        {o.scheduled_at && (
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+                            {modifiable ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setReschedOrder(o);
+                                    setReschedDate(startOfDay(addDays(new Date(), 1)));
+                                    setReschedSlot(null);
+                                  }}
+                                  className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
+                                >
+                                  <CalendarIcon className="h-3.5 w-3.5" />
+                                  Перенести
+                                </button>
+                                <button
+                                  onClick={() => cancelOrder(o)}
+                                  disabled={actionLoading}
+                                  className="flex items-center gap-1.5 rounded-lg border border-border/50 px-3 py-1.5 text-xs text-muted-foreground hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Отменить
+                                </button>
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">
+                                Перенос и отмена доступны не позднее чем за 2 часа до записи. По вопросам — позвоните нам.
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
+
+            {/* Reschedule modal */}
+            <AnimatePresence>
+              {reschedOrder && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                  onClick={() => setReschedOrder(null)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-lg rounded-2xl border border-border/50 bg-card p-6"
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="font-display text-lg font-semibold text-foreground">
+                        Перенос записи
+                      </h3>
+                      <button
+                        onClick={() => setReschedOrder(null)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      {reschedOrder.car_make} {reschedOrder.car_model} ·{" "}
+                      {reschedOrder.service_id && services[reschedOrder.service_id]?.name}
+                    </p>
+
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs uppercase text-muted-foreground">Дата</p>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {Array.from({ length: 7 }, (_, i) =>
+                          addDays(startOfDay(new Date()), i + 1),
+                        ).map((d) => {
+                          const active = isSameDay(d, reschedDate);
+                          return (
+                            <button
+                              key={d.toISOString()}
+                              onClick={() => {
+                                setReschedDate(d);
+                                setReschedSlot(null);
+                              }}
+                              className={`flex flex-col items-center rounded-lg border py-2 text-xs ${
+                                active
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border/50 hover:border-primary/50"
+                              }`}
+                            >
+                              <span className="opacity-70">{format(d, "EE", { locale: ru })}</span>
+                              <span className="font-bold">{format(d, "d")}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="mb-2 flex items-center gap-1.5 text-xs uppercase text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        Свободное время
+                      </p>
+                      <div className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+                        {reschedSlots.map(({ time, busy: b, past }) => {
+                          const disabled = b || past;
+                          const active = reschedSlot && reschedSlot.getTime() === time.getTime();
+                          return (
+                            <button
+                              key={time.toISOString()}
+                              disabled={disabled}
+                              onClick={() => setReschedSlot(time)}
+                              className={`rounded-md border py-1.5 text-xs ${
+                                active
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : disabled
+                                    ? "cursor-not-allowed border-border/30 bg-muted/30 text-muted-foreground/50 line-through"
+                                    : "border-border/50 hover:border-primary"
+                              }`}
+                            >
+                              {format(time, "HH:mm")}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setReschedOrder(null)}
+                        className="rounded-lg border border-border/50 px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        onClick={confirmReschedule}
+                        disabled={!reschedSlot || actionLoading}
+                        className="rounded-lg bg-gold-gradient px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                      >
+                        Подтвердить перенос
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
       </main>
