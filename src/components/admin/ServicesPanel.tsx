@@ -13,6 +13,7 @@ export type Service = {
   description: string | null;
   base_price: number;
   sort_order: number;
+  duration_minutes: number;
 };
 
 export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
@@ -22,11 +23,13 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
 
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
+  const [newDuration, setNewDuration] = useState("60");
   const [newDesc, setNewDesc] = useState("");
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("");
+  const [editDuration, setEditDuration] = useState("60");
   const [editDesc, setEditDesc] = useState("");
 
   const load = async () => {
@@ -50,6 +53,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
     const { error } = await supabase.from("services").insert({
       name: newName.trim(),
       base_price: parseFloat(newPrice) || 0,
+      duration_minutes: parseInt(newDuration, 10) || 60,
       description: newDesc.trim() || null,
       sort_order: items.length + 1,
     });
@@ -58,6 +62,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
     toast.success("Услуга создана");
     setNewName("");
     setNewPrice("");
+    setNewDuration("60");
     setNewDesc("");
     load();
     onChanged?.();
@@ -67,6 +72,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
     setEditId(s.id);
     setEditName(s.name);
     setEditPrice(String(s.base_price));
+    setEditDuration(String(s.duration_minutes ?? 60));
     setEditDesc(s.description ?? "");
   };
 
@@ -78,6 +84,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
       .update({
         name: editName.trim(),
         base_price: parseFloat(editPrice) || 0,
+        duration_minutes: parseInt(editDuration, 10) || 60,
         description: editDesc.trim() || null,
       })
       .eq("id", editId);
