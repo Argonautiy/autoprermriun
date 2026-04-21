@@ -47,11 +47,18 @@ function ProfilePage() {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [profRes, carsRes, ordersRes, diagRes] = await Promise.all([
+    const [profRes, carsRes, ordersRes, diagRes, busyRes, svcRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).single(),
       supabase.from("user_cars").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("repair_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("diagnostics_history").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      supabase
+        .from("repair_orders")
+        .select("id, scheduled_at, services(duration_minutes)")
+        .not("scheduled_at", "is", null)
+        .neq("status", "cancelled")
+        .gte("scheduled_at", new Date().toISOString()),
+      supabase.from("services").select("id, name, duration_minutes"),
     ]);
     if (profRes.data) {
       setProfile(profRes.data);
@@ -61,6 +68,22 @@ function ProfilePage() {
     if (carsRes.data) setCars(carsRes.data);
     if (ordersRes.data) setOrders(ordersRes.data);
     if (diagRes.data) setDiagnostics(diagRes.data);
+    if (busyRes.data) {
+      setBusy(
+        (busyRes.data as any[]).map((o) => ({
+          id: o.id,
+          start: o.scheduled_at,
+          duration: o.services?.duration_minutes ?? 60,
+        })),
+      );
+    }
+    if (svcRes.data) {
+      const map: Record<string, { name: string; duration_minutes: number }> = {};
+      svcRes.data.forEach((s: any) => {
+        map[s.id] = { name: s.name, duration_minutes: s.duration_minutes };
+      });
+      setServices(map);
+    }
   }, [user]);
 
   useEffect(() => {
