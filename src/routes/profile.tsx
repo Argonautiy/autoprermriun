@@ -131,6 +131,99 @@ function ProfilePage() {
     if (expandedDiag === id) setExpandedDiag(null);
   };
 
+  const canModify = (o: Tables<"repair_orders">) => {
+    if (!o.scheduled_at) return false;
+    if (!["waiting_diagnosis", "waiting_price"].includes(o.status)) return false;
+    const diffMs = new Date(o.scheduled_at).getTime() - Date.now();
+    return diffMs >= 2 * 60 * 60 * 1000;
+  };
+
+  const cancelOrder = async (o: Tables<"repair_orders">) => {
+    if (!canModify(o)) return toast.error("Отмена возможна не позднее чем за 2 часа до записи");
+    if (!confirm("Отменить запись? Это действие нельзя отменить.")) return;
+    setActionLoading(true);
+    const { error } = await supabase.from("repair_orders").delete().eq("id", o.id);
+    if (error) {
+      setActionLoading(false);
+      return toast.error(error.message);
+    }
+    if (o.telegram_chat_id) {
+      try {
+        const when = format(new Date(o.scheduled_at!), "d MMMM в HH:mm", { locale: ru });
+        await sendTelegramNotification({
+          data: {
+            chatId: o.telegram_chat_id,
+            message: `<b>❌ Запись отменена — Авто Premium</b>\n\nЗапись на <b>${when}</b> (${o.car_make} ${o.car_model}) отменена.`,
+          },
+        });
+      } catch {}
+    }
+    toast.success("Запись отменена");
+    setActionLoading(false);
+    await loadData();
+  };
+
+  const isSlotBusyForResched = (slot: Date, durationMin: number, excludeId: string) => {
+    const slotStart = slot.getTime();
+    const slotEnd = slotStart + durationMin * 60000;
+    return busy.some((b) => {
+      if (b.id === excludeId) return false;
+      const bs = new Date(b.start).getTime();
+      const be = bs + b.duration * 60000;
+      return slotStart < be && slotEnd > bs;
+    });
+  };
+
+  const reschedSlots = (() => {
+    if (!reschedOrder) return [];
+    const dur = (reschedOrder.service_id && services[reschedOrder.service_id]?.duration_minutes) || 60;
+    const slots: { time: Date; busy: boolean; past: boolean }[] = [];
+    const start = new Date(reschedDate);
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(reschedDate);
+    end.setHours(19, 0, 0, 0);
+    const step = Math.max(30, Math.min(dur, 120));
+    let cur = start;
+    while (cur < end) {
+      slots.push({
+        time: new Date(cur),
+        busy: isSlotBusyForResched(cur, dur, reschedOrder.id),
+        past: isBefore(cur, new Date(Date.now() + 2 * 60 * 60 * 1000)),
+      });
+      cur = new Date(cur.getTime() + step * 60000);
+    }
+    return slots;
+  })();
+
+  const confirmReschedule = async () => {
+    if (!reschedOrder || !reschedSlot) return;
+    setActionLoading(true);
+    const { error } = await supabase
+      .from("repair_orders")
+      .update({ scheduled_at: reschedSlot.toISOString() })
+      .eq("id", reschedOrder.id);
+    if (error) {
+      setActionLoading(false);
+      return toast.error(error.message);
+    }
+    if (reschedOrder.telegram_chat_id) {
+      try {
+        const when = format(reschedSlot, "d MMMM, EEEE, в HH:mm", { locale: ru });
+        await sendTelegramNotification({
+          data: {
+            chatId: reschedOrder.telegram_chat_id,
+            message: `<b>📅 Запись перенесена — Авто Premium</b>\n\nНовое время: <b>${when}</b>\nАвто: ${reschedOrder.car_make} ${reschedOrder.car_model}`,
+          },
+        });
+      } catch {}
+    }
+    toast.success("Запись перенесена");
+    setReschedOrder(null);
+    setReschedSlot(null);
+    setActionLoading(false);
+    await loadData();
+  };
+
   const handleLogout = async () => {
     await signOut();
     navigate({ to: "/" });
