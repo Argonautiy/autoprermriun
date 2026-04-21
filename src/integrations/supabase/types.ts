@@ -219,6 +219,7 @@ export type Database = {
           scheduled_at: string | null
           service_id: string | null
           status: Database["public"]["Enums"]["repair_status"]
+          telegram_chat_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -238,6 +239,7 @@ export type Database = {
           scheduled_at?: string | null
           service_id?: string | null
           status?: Database["public"]["Enums"]["repair_status"]
+          telegram_chat_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -257,6 +259,7 @@ export type Database = {
           scheduled_at?: string | null
           service_id?: string | null
           status?: Database["public"]["Enums"]["repair_status"]
+          telegram_chat_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
