@@ -111,7 +111,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
         <h3 className="font-display text-base font-semibold text-foreground">
           Новая услуга
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <Label className="mb-2 block">Название *</Label>
             <Input
@@ -127,6 +127,15 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value)}
               placeholder="5000"
+            />
+          </div>
+          <div>
+            <Label className="mb-2 block">Длительность (мин)</Label>
+            <Input
+              type="number"
+              value={newDuration}
+              onChange={(e) => setNewDuration(e.target.value)}
+              placeholder="60"
             />
           </div>
         </div>
@@ -163,6 +172,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
                 <th className="px-4 py-3">Название</th>
                 <th className="px-4 py-3">Описание</th>
                 <th className="px-4 py-3">Цена</th>
+                <th className="px-4 py-3">Длит.</th>
                 <th className="px-4 py-3 text-right">Действия</th>
               </tr>
             </thead>
@@ -182,6 +192,14 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
                         value={editPrice}
                         onChange={(e) => setEditPrice(e.target.value)}
                         className="w-28"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Input
+                        type="number"
+                        value={editDuration}
+                        onChange={(e) => setEditDuration(e.target.value)}
+                        className="w-20"
                       />
                     </td>
                     <td className="px-4 py-3">
