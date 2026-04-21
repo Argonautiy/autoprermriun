@@ -6,10 +6,14 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench, Sparkles, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, Trash,
+  Car, Plus, Trash2, LogOut, User, Phone, Save, X, Wrench, Sparkles, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, Trash, Calendar as CalendarIcon, XCircle, Clock,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { statusBadge, type RepairStatus } from "@/components/admin/OrdersPanel";
+import { format, addDays, startOfDay, isBefore, isSameDay } from "date-fns";
+import { ru } from "date-fns/locale";
+import { sendTelegramNotification } from "@/server/notify-telegram";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -34,14 +38,27 @@ function ProfilePage() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [reschedOrder, setReschedOrder] = useState<Tables<"repair_orders"> | null>(null);
+  const [reschedSlot, setReschedSlot] = useState<Date | null>(null);
+  const [reschedDate, setReschedDate] = useState<Date>(startOfDay(addDays(new Date(), 1)));
+  const [busy, setBusy] = useState<{ id: string; start: string; duration: number }[]>([]);
+  const [services, setServices] = useState<Record<string, { name: string; duration_minutes: number }>>({});
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [profRes, carsRes, ordersRes, diagRes] = await Promise.all([
+    const [profRes, carsRes, ordersRes, diagRes, busyRes, svcRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).single(),
       supabase.from("user_cars").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("repair_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("diagnostics_history").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      supabase
+        .from("repair_orders")
+        .select("id, scheduled_at, services(duration_minutes)")
+        .not("scheduled_at", "is", null)
+        .neq("status", "cancelled")
+        .gte("scheduled_at", new Date().toISOString()),
+      supabase.from("services").select("id, name, duration_minutes"),
     ]);
     if (profRes.data) {
       setProfile(profRes.data);
@@ -51,6 +68,22 @@ function ProfilePage() {
     if (carsRes.data) setCars(carsRes.data);
     if (ordersRes.data) setOrders(ordersRes.data);
     if (diagRes.data) setDiagnostics(diagRes.data);
+    if (busyRes.data) {
+      setBusy(
+        (busyRes.data as any[]).map((o) => ({
+          id: o.id,
+          start: o.scheduled_at,
+          duration: o.services?.duration_minutes ?? 60,
+        })),
+      );
+    }
+    if (svcRes.data) {
+      const map: Record<string, { name: string; duration_minutes: number }> = {};
+      svcRes.data.forEach((s: any) => {
+        map[s.id] = { name: s.name, duration_minutes: s.duration_minutes };
+      });
+      setServices(map);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -96,6 +129,99 @@ function ProfilePage() {
     await supabase.from("diagnostics_history").delete().eq("id", id);
     setDiagnostics((prev) => prev.filter((d) => d.id !== id));
     if (expandedDiag === id) setExpandedDiag(null);
+  };
+
+  const canModify = (o: Tables<"repair_orders">) => {
+    if (!o.scheduled_at) return false;
+    if (!["waiting_diagnosis", "waiting_price"].includes(o.status)) return false;
+    const diffMs = new Date(o.scheduled_at).getTime() - Date.now();
+    return diffMs >= 2 * 60 * 60 * 1000;
+  };
+
+  const cancelOrder = async (o: Tables<"repair_orders">) => {
+    if (!canModify(o)) return toast.error("Отмена возможна не позднее чем за 2 часа до записи");
+    if (!confirm("Отменить запись? Это действие нельзя отменить.")) return;
+    setActionLoading(true);
+    const { error } = await supabase.from("repair_orders").delete().eq("id", o.id);
+    if (error) {
+      setActionLoading(false);
+      return toast.error(error.message);
+    }
+    if (o.telegram_chat_id) {
+      try {
+        const when = format(new Date(o.scheduled_at!), "d MMMM в HH:mm", { locale: ru });
+        await sendTelegramNotification({
+          data: {
+            chatId: o.telegram_chat_id,
+            message: `<b>❌ Запись отменена — Авто Premium</b>\n\nЗапись на <b>${when}</b> (${o.car_make} ${o.car_model}) отменена.`,
+          },
+        });
+      } catch {}
+    }
+    toast.success("Запись отменена");
+    setActionLoading(false);
+    await loadData();
+  };
+
+  const isSlotBusyForResched = (slot: Date, durationMin: number, excludeId: string) => {
+    const slotStart = slot.getTime();
+    const slotEnd = slotStart + durationMin * 60000;
+    return busy.some((b) => {
+      if (b.id === excludeId) return false;
+      const bs = new Date(b.start).getTime();
+      const be = bs + b.duration * 60000;
+      return slotStart < be && slotEnd > bs;
+    });
+  };
+
+  const reschedSlots = (() => {
+    if (!reschedOrder) return [];
+    const dur = (reschedOrder.service_id && services[reschedOrder.service_id]?.duration_minutes) || 60;
+    const slots: { time: Date; busy: boolean; past: boolean }[] = [];
+    const start = new Date(reschedDate);
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(reschedDate);
+    end.setHours(19, 0, 0, 0);
+    const step = Math.max(30, Math.min(dur, 120));
+    let cur = start;
+    while (cur < end) {
+      slots.push({
+        time: new Date(cur),
+        busy: isSlotBusyForResched(cur, dur, reschedOrder.id),
+        past: isBefore(cur, new Date(Date.now() + 2 * 60 * 60 * 1000)),
+      });
+      cur = new Date(cur.getTime() + step * 60000);
+    }
+    return slots;
+  })();
+
+  const confirmReschedule = async () => {
+    if (!reschedOrder || !reschedSlot) return;
+    setActionLoading(true);
+    const { error } = await supabase
+      .from("repair_orders")
+      .update({ scheduled_at: reschedSlot.toISOString() })
+      .eq("id", reschedOrder.id);
+    if (error) {
+      setActionLoading(false);
+      return toast.error(error.message);
+    }
+    if (reschedOrder.telegram_chat_id) {
+      try {
+        const when = format(reschedSlot, "d MMMM, EEEE, в HH:mm", { locale: ru });
+        await sendTelegramNotification({
+          data: {
+            chatId: reschedOrder.telegram_chat_id,
+            message: `<b>📅 Запись перенесена — Авто Premium</b>\n\nНовое время: <b>${when}</b>\nАвто: ${reschedOrder.car_make} ${reschedOrder.car_model}`,
+          },
+        });
+      } catch {}
+    }
+    toast.success("Запись перенесена");
+    setReschedOrder(null);
+    setReschedSlot(null);
+    setActionLoading(false);
+    await loadData();
   };
 
   const handleLogout = async () => {
@@ -407,40 +533,192 @@ function ProfilePage() {
               </h2>
               {orders.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  У вас пока нет заказов. Записаться на ремонт можно по телефону.
+                  У вас пока нет заказов.{" "}
+                  <Link to="/booking" className="text-primary hover:underline">Записаться онлайн</Link>
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {orders.map((o) => (
-                    <div
-                      key={o.id}
-                      className="rounded-xl border border-border/50 bg-surface px-5 py-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-display text-sm font-semibold text-foreground">
-                            {o.car_make} {o.car_model}
-                            {o.car_year ? ` · ${o.car_year}` : ""}
-                          </p>
-                          {o.notes && (
-                            <p className="mt-1 text-xs text-muted-foreground">{o.notes}</p>
-                          )}
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Создан: {new Date(o.created_at).toLocaleDateString("ru-RU")}
-                          </p>
+                  {orders.map((o) => {
+                    const modifiable = canModify(o);
+                    return (
+                      <div
+                        key={o.id}
+                        className="rounded-xl border border-border/50 bg-surface px-5 py-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-display text-sm font-semibold text-foreground">
+                              {o.car_make} {o.car_model}
+                              {o.car_year ? ` · ${o.car_year}` : ""}
+                            </p>
+                            {o.scheduled_at && (
+                              <p className="mt-1 flex items-center gap-1.5 text-xs text-primary">
+                                <CalendarIcon className="h-3.5 w-3.5" />
+                                {format(new Date(o.scheduled_at), "d MMMM, EEEE, в HH:mm", { locale: ru })}
+                              </p>
+                            )}
+                            {o.notes && (
+                              <p className="mt-1 text-xs text-muted-foreground">{o.notes}</p>
+                            )}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Создан: {new Date(o.created_at).toLocaleDateString("ru-RU")}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {statusBadge(o.status as RepairStatus)}
+                            <p className="text-sm font-semibold text-foreground">
+                              {Number(o.labor_cost).toLocaleString("ru-RU")} ₸
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {statusBadge(o.status as RepairStatus)}
-                          <p className="text-sm font-semibold text-foreground">
-                            {Number(o.labor_cost).toLocaleString("ru-RU")} ₸
-                          </p>
-                        </div>
+
+                        {o.scheduled_at && (
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+                            {modifiable ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setReschedOrder(o);
+                                    setReschedDate(startOfDay(addDays(new Date(), 1)));
+                                    setReschedSlot(null);
+                                  }}
+                                  className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
+                                >
+                                  <CalendarIcon className="h-3.5 w-3.5" />
+                                  Перенести
+                                </button>
+                                <button
+                                  onClick={() => cancelOrder(o)}
+                                  disabled={actionLoading}
+                                  className="flex items-center gap-1.5 rounded-lg border border-border/50 px-3 py-1.5 text-xs text-muted-foreground hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Отменить
+                                </button>
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">
+                                Перенос и отмена доступны не позднее чем за 2 часа до записи. По вопросам — позвоните нам.
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
+
+            {/* Reschedule modal */}
+            <AnimatePresence>
+              {reschedOrder && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                  onClick={() => setReschedOrder(null)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-lg rounded-2xl border border-border/50 bg-card p-6"
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="font-display text-lg font-semibold text-foreground">
+                        Перенос записи
+                      </h3>
+                      <button
+                        onClick={() => setReschedOrder(null)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      {reschedOrder.car_make} {reschedOrder.car_model} ·{" "}
+                      {reschedOrder.service_id && services[reschedOrder.service_id]?.name}
+                    </p>
+
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs uppercase text-muted-foreground">Дата</p>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {Array.from({ length: 7 }, (_, i) =>
+                          addDays(startOfDay(new Date()), i + 1),
+                        ).map((d) => {
+                          const active = isSameDay(d, reschedDate);
+                          return (
+                            <button
+                              key={d.toISOString()}
+                              onClick={() => {
+                                setReschedDate(d);
+                                setReschedSlot(null);
+                              }}
+                              className={`flex flex-col items-center rounded-lg border py-2 text-xs ${
+                                active
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border/50 hover:border-primary/50"
+                              }`}
+                            >
+                              <span className="opacity-70">{format(d, "EE", { locale: ru })}</span>
+                              <span className="font-bold">{format(d, "d")}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="mb-2 flex items-center gap-1.5 text-xs uppercase text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        Свободное время
+                      </p>
+                      <div className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+                        {reschedSlots.map(({ time, busy: b, past }) => {
+                          const disabled = b || past;
+                          const active = reschedSlot && reschedSlot.getTime() === time.getTime();
+                          return (
+                            <button
+                              key={time.toISOString()}
+                              disabled={disabled}
+                              onClick={() => setReschedSlot(time)}
+                              className={`rounded-md border py-1.5 text-xs ${
+                                active
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : disabled
+                                    ? "cursor-not-allowed border-border/30 bg-muted/30 text-muted-foreground/50 line-through"
+                                    : "border-border/50 hover:border-primary"
+                              }`}
+                            >
+                              {format(time, "HH:mm")}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setReschedOrder(null)}
+                        className="rounded-lg border border-border/50 px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        onClick={confirmReschedule}
+                        disabled={!reschedSlot || actionLoading}
+                        className="rounded-lg bg-gold-gradient px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                      >
+                        Подтвердить перенос
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
       </main>
