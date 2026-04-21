@@ -225,6 +225,9 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
                     <td className="px-4 py-3 text-sm text-foreground">
                       {Number(s.base_price).toLocaleString("ru-RU")} ₸
                     </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {s.duration_minutes ?? 60} мин
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <Button size="icon" variant="ghost" onClick={() => startEdit(s)}>
@@ -241,7 +244,7 @@ export function ServicesPanel({ onChanged }: { onChanged?: () => void }) {
               {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     Пока нет услуг
