@@ -212,12 +212,20 @@ function AdminPage() {
               Управление каталогом · {parts.length} товаров · {categories.length} категорий
             </p>
           </div>
-          <Link to="/admin/kanban">
-            <Button className="bg-gold-gradient text-primary-foreground">
-              <LucideIcons.LayoutGrid className="mr-2 h-4 w-4" />
-              Kanban-доска заказов
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/admin/analytics">
+              <Button variant="outline">
+                <LucideIcons.BarChart3 className="mr-2 h-4 w-4" />
+                Аналитика
+              </Button>
+            </Link>
+            <Link to="/admin/kanban">
+              <Button className="bg-gold-gradient text-primary-foreground">
+                <LucideIcons.LayoutGrid className="mr-2 h-4 w-4" />
+                Kanban-доска заказов
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Tabs defaultValue="orders" className="w-full">
