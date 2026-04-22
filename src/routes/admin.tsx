@@ -203,13 +203,21 @@ function AdminPage() {
   return (
     <div className="min-h-screen bg-background pb-20 pt-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground">
-            Админ-панель
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Управление каталогом · {parts.length} товаров · {categories.length} категорий
-          </p>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">
+              Админ-панель
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Управление каталогом · {parts.length} товаров · {categories.length} категорий
+            </p>
+          </div>
+          <Link to="/admin/kanban">
+            <Button className="bg-gold-gradient text-primary-foreground">
+              <LucideIcons.LayoutGrid className="mr-2 h-4 w-4" />
+              Kanban-доска заказов
+            </Button>
+          </Link>
         </div>
 
         <Tabs defaultValue="orders" className="w-full">
