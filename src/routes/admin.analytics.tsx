@@ -442,7 +442,7 @@ function AnalyticsPage() {
                     <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                     <Tooltip
                       contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                      formatter={(v: any, name: string) => name === "Выручка" ? fmtMoney(Number(v)) : v}
+                      formatter={(v: any, name: any) => name === "Выручка" ? fmtMoney(Number(v)) : v}
                     />
                     <Legend />
                     <Line yAxisId="left" type="monotone" dataKey="revenue" name="Выручка" stroke="#22c55e" strokeWidth={2} dot={false} />
@@ -483,7 +483,7 @@ function AnalyticsPage() {
                       <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} width={80} />
                       <Tooltip
                         contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                        formatter={(v: any, name: string) => name === "Выручка" ? fmtMoney(Number(v)) : v}
+                        formatter={(v: any, name: any) => name === "Выручка" ? fmtMoney(Number(v)) : v}
                       />
                       <Legend />
                       <Bar dataKey="count" name="Заказов" fill="#3b82f6" />
