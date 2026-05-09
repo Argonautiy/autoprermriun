@@ -14,8 +14,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as BookingRouteImport } from './routes/booking'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminKanbanRouteImport } from './routes/admin.kanban'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 
@@ -44,14 +44,14 @@ const BookingRoute = BookingRouteImport.update({
   path: '/booking',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminKanbanRoute = AdminKanbanRouteImport.update({
@@ -67,7 +67,6 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
   '/booking': typeof BookingRoute
   '/catalog': typeof CatalogRoute
   '/diagnostics': typeof DiagnosticsRoute
@@ -75,10 +74,10 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/kanban': typeof AdminKanbanRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
   '/booking': typeof BookingRoute
   '/catalog': typeof CatalogRoute
   '/diagnostics': typeof DiagnosticsRoute
@@ -86,11 +85,11 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/kanban': typeof AdminKanbanRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
   '/booking': typeof BookingRoute
   '/catalog': typeof CatalogRoute
   '/diagnostics': typeof DiagnosticsRoute
@@ -98,12 +97,12 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/kanban': typeof AdminKanbanRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
     | '/booking'
     | '/catalog'
     | '/diagnostics'
@@ -111,10 +110,10 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/analytics'
     | '/admin/kanban'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/booking'
     | '/catalog'
     | '/diagnostics'
@@ -122,10 +121,10 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/analytics'
     | '/admin/kanban'
+    | '/admin'
   id:
     | '__root__'
     | '/'
-    | '/admin'
     | '/booking'
     | '/catalog'
     | '/diagnostics'
@@ -133,16 +132,17 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/analytics'
     | '/admin/kanban'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRouteWithChildren
   BookingRoute: typeof BookingRoute
   CatalogRoute: typeof CatalogRoute
   DiagnosticsRoute: typeof DiagnosticsRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -182,18 +182,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/kanban': {
@@ -213,27 +213,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AdminRouteChildren {
-  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
-  AdminKanbanRoute: typeof AdminKanbanRoute
-}
-
-const AdminRouteChildren: AdminRouteChildren = {
-  AdminAnalyticsRoute: AdminAnalyticsRoute,
-  AdminKanbanRoute: AdminKanbanRoute,
-}
-
-const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRouteWithChildren,
   BookingRoute: BookingRoute,
   CatalogRoute: CatalogRoute,
   DiagnosticsRoute: DiagnosticsRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
