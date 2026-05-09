@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/Header";
 
 export const Route = createFileRoute("/booking")({
   component: BookingPage,
