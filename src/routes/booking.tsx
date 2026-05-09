@@ -222,7 +222,7 @@ function BookingPage() {
 
   if (success) {
     return (
-      <>
+      <div>
         <Header />
         <div className="flex min-h-screen items-center justify-center bg-background px-6 pt-24">
         <motion.div
@@ -258,12 +258,12 @@ function BookingPage() {
           </div>
         </motion.div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div>
       <Header />
       <div className="min-h-screen bg-background pb-20 pt-28">
       <div className="mx-auto max-w-5xl px-6">
@@ -630,6 +630,6 @@ function BookingPage() {
         )}
       </div>
     </div>
-    </>
+    </div>
   );
 }
