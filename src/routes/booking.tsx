@@ -222,7 +222,7 @@ function BookingPage() {
 
   if (success) {
     return (
-      <>
+      <div>
         <Header />
         <div className="flex min-h-screen items-center justify-center bg-background px-6 pt-24">
         <motion.div
