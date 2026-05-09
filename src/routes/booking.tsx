@@ -258,12 +258,12 @@ function BookingPage() {
           </div>
         </motion.div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div>
       <Header />
       <div className="min-h-screen bg-background pb-20 pt-28">
       <div className="mx-auto max-w-5xl px-6">
