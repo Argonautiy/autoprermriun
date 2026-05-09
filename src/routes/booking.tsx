@@ -222,7 +222,9 @@ function BookingPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-6 pt-24">
+      <>
+        <Header />
+        <div className="flex min-h-screen items-center justify-center bg-background px-6 pt-24">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}

@@ -55,14 +55,14 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminKanbanRoute = AdminKanbanRouteImport.update({
-  id: '/kanban',
-  path: '/kanban',
-  getParentRoute: () => AdminRoute,
+  id: '/admin/kanban',
+  path: '/admin/kanban',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
-  getParentRoute: () => AdminRoute,
+  id: '/admin/analytics',
+  path: '/admin/analytics',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -142,6 +142,8 @@ export interface RootRouteChildren {
   DiagnosticsRoute: typeof DiagnosticsRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminKanbanRoute: typeof AdminKanbanRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -198,17 +200,17 @@ declare module '@tanstack/react-router' {
     }
     '/admin/kanban': {
       id: '/admin/kanban'
-      path: '/kanban'
+      path: '/admin/kanban'
       fullPath: '/admin/kanban'
       preLoaderRoute: typeof AdminKanbanRouteImport
-      parentRoute: typeof AdminRoute
+      parentRoute: typeof rootRouteImport
     }
     '/admin/analytics': {
       id: '/admin/analytics'
-      path: '/analytics'
+      path: '/admin/analytics'
       fullPath: '/admin/analytics'
       preLoaderRoute: typeof AdminAnalyticsRouteImport
-      parentRoute: typeof AdminRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -220,17 +222,10 @@ const rootRouteChildren: RootRouteChildren = {
   DiagnosticsRoute: DiagnosticsRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminKanbanRoute: AdminKanbanRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
