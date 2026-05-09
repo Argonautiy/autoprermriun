@@ -630,6 +630,6 @@ function BookingPage() {
         )}
       </div>
     </div>
-    </>
+    </div>
   );
 }
