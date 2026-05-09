@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/Header";
 
 export const Route = createFileRoute("/booking")({
   component: BookingPage,
@@ -221,7 +222,9 @@ function BookingPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-6 pt-24">
+      <>
+        <Header />
+        <div className="flex min-h-screen items-center justify-center bg-background px-6 pt-24">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -254,12 +257,15 @@ function BookingPage() {
             )}
           </div>
         </motion.div>
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-28">
+    <>
+      <Header />
+      <div className="min-h-screen bg-background pb-20 pt-28">
       <div className="mx-auto max-w-5xl px-6">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -624,5 +630,6 @@ function BookingPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

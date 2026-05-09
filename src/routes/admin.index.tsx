@@ -32,7 +32,7 @@ function slugify(s: string) {
     .replace(/-+/g, "-");
 }
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/admin/")({
   component: AdminPage,
   head: () => ({
     meta: [{ title: "Админ-панель — Авто Premium" }],
