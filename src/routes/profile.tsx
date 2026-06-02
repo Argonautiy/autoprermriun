@@ -12,7 +12,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { statusBadge, type RepairStatus } from "@/components/admin/OrdersPanel";
 import { format, addDays, startOfDay, isBefore, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { sendTelegramNotification } from "@/server/notify-telegram";
+import { sendTelegramNotification } from "@/lib/notify-telegram.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
