@@ -119,50 +119,7 @@ ${servicesList || "(услуги ещё не добавлены)"}
       },
     ];
 
-    const resp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          tools,
-          tool_choice: {
-            type: "function",
-            function: { name: "provide_diagnosis" },
-          },
-        }),
-      },
-    );
-
-    if (!resp.ok) {
-      if (resp.status === 429) {
-        throw new Error("Слишком много запросов. Попробуйте через минуту.");
-      }
-      if (resp.status === 402) {
-        throw new Error(
-          "Закончились кредиты AI. Пополните баланс в настройках.",
-        );
-      }
-      const text = await resp.text();
-      console.error("AI gateway error:", resp.status, text);
-      throw new Error("Ошибка AI-сервиса. Попробуйте позже.");
-    }
-
-    const json = await resp.json();
-    const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      throw new Error("AI не вернул структурированный ответ");
-    }
-
-    const result = JSON.parse(toolCall.function.arguments) as {
+    let result: {
       urgency: "low" | "medium" | "high";
       summary: string;
       causes: Array<{
@@ -172,11 +129,98 @@ ${servicesList || "(услуги ещё не добавлены)"}
       }>;
       recommended_service_ids: string[];
       advice: string;
-    };
+    } | null = null;
+
+    const diagnosisParams = tools[0].function.parameters;
+
+    // Путь 1: Lovable AI Gateway
+    if (LOVABLE_API_KEY) {
+      const resp = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            tools,
+            tool_choice: {
+              type: "function",
+              function: { name: "provide_diagnosis" },
+            },
+          }),
+        },
+      );
+
+      if (resp.ok) {
+        const json = await resp.json();
+        const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+        if (args) result = JSON.parse(args);
+      } else {
+        if (resp.status === 429) throw new Error("Слишком много запросов. Попробуйте через минуту.");
+        if (resp.status === 402 && !GEMINI_API_KEY) {
+          throw new Error("Закончились кредиты AI. Пополните баланс или добавьте GEMINI_API_KEY.");
+        }
+        console.warn("Lovable AI gateway failed, trying direct Gemini:", resp.status);
+      }
+    }
+
+    // Путь 2: прямой Gemini API
+    if (!result && GEMINI_API_KEY) {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            tools: [
+              {
+                functionDeclarations: [
+                  {
+                    name: "provide_diagnosis",
+                    description: "Возвращает структурированную диагностику неисправности",
+                    parameters: diagnosisParams,
+                  },
+                ],
+              },
+            ],
+            toolConfig: {
+              functionCallingConfig: {
+                mode: "ANY",
+                allowedFunctionNames: ["provide_diagnosis"],
+              },
+            },
+          }),
+        },
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.error("Gemini direct error:", resp.status, text);
+        throw new Error(`Ошибка Gemini API [${resp.status}]. Проверьте GEMINI_API_KEY.`);
+      }
+      const json = await resp.json();
+      const fnCall = json.candidates?.[0]?.content?.parts?.find(
+        (p: { functionCall?: { args?: unknown } }) => p.functionCall,
+      )?.functionCall;
+      if (fnCall?.args) {
+        result = fnCall.args;
+      }
+    }
+
+    if (!result) throw new Error("AI не вернул структурированный ответ");
 
     // Подмешиваем полные данные рекомендованных услуг
     const recommendedServices = (services ?? []).filter((s) =>
-      result.recommended_service_ids.includes(s.id),
+      result!.recommended_service_ids.includes(s.id),
     );
 
     return {
@@ -184,3 +228,4 @@ ${servicesList || "(услуги ещё не добавлены)"}
       recommended_services: recommendedServices,
     };
   });
+
