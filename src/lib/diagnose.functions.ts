@@ -25,7 +25,11 @@ export const diagnose = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY не настроен");
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      throw new Error("Не настроен AI: нужен LOVABLE_API_KEY или GEMINI_API_KEY в .env");
+    }
+
 
     // Загружаем каталог услуг
     const { data: services } = await supabaseAdmin
