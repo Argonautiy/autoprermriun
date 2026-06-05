@@ -9,32 +9,56 @@ type NotifyInput = {
 
 async function sendTelegram(chatId: string, text: string) {
   const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY не настроен");
   const TELEGRAM_API_KEY = process.env.TELEGRAM_API_KEY;
-  if (!TELEGRAM_API_KEY) throw new Error("TELEGRAM_API_KEY не настроен");
+  const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-  const res = await fetch(`${GATEWAY_URL}/sendMessage`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TELEGRAM_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
+  const body = JSON.stringify({
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
-    throw new Error(
-      `Telegram ошибка [${res.status}]: ${data?.description ?? JSON.stringify(data)}`,
-    );
+
+  // Путь 1: Lovable connector gateway
+  if (LOVABLE_API_KEY && TELEGRAM_API_KEY) {
+    const res = await fetch(`${GATEWAY_URL}/sendMessage`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": TELEGRAM_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) return data.result;
+    console.warn("Telegram gateway failed, trying direct:", res.status, data);
   }
-  return data.result;
+
+  // Путь 2: прямой Telegram Bot API
+  if (TELEGRAM_BOT_TOKEN) {
+    const res = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      },
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      throw new Error(
+        `Telegram ошибка [${res.status}]: ${data?.description ?? JSON.stringify(data)}`,
+      );
+    }
+    return data.result;
+  }
+
+  throw new Error(
+    "Не настроен Telegram: нужен LOVABLE_API_KEY+TELEGRAM_API_KEY или TELEGRAM_BOT_TOKEN в .env",
+  );
 }
+
 
 export const sendTelegramNotification = createServerFn({ method: "POST" })
   .inputValidator((input: NotifyInput) => {
