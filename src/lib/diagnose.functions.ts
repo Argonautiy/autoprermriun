@@ -232,6 +232,12 @@ ${servicesList || "(услуги ещё не добавлены)"}
       ...result,
       recommended_services: recommendedServices,
     };
-  }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[diagnose] failed:", msg, e);
+      throw new Error(msg || "Неизвестная ошибка диагностики");
+    }
+  });
+
 
 
