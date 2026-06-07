@@ -280,7 +280,7 @@ function DiagnosticsPage() {
                       Рекомендуем услуги
                     </h3>
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      {result.recommended_services.map((s) => (
+                      {result.recommended_services.map((s: { id: string; name: string; description: string | null; base_price: number }) => (
                         <div
                           key={s.id}
                           className="group flex flex-col rounded-xl border border-border/50 bg-card p-5 transition-all hover:border-primary/40 hover:shadow-gold"
