@@ -30,10 +30,13 @@ export const diagnose = createServerFn({ method: "POST" })
       throw new Error("AI не настроен: добавьте LOVABLE_API_KEY или GEMINI_API_KEY");
     }
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const { data: services } = await supabaseAdmin
       .from("services")
       .select("id, name, description, base_price")
       .order("sort_order");
+
 
     const servicesList = (services ?? [])
       .map(
