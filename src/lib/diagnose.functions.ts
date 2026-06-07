@@ -239,5 +239,6 @@ ${servicesList || "(услуги ещё не добавлены)"}
       ...result,
       recommended_services: recommendedServices,
     };
-  });
+  }
+
 
