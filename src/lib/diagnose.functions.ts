@@ -32,18 +32,20 @@ export const diagnose = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: services } = await supabaseAdmin
+    type ServiceRow = { id: string; name: string; description: string | null; base_price: number };
+    const { data: servicesData } = await supabaseAdmin
       .from("services")
       .select("id, name, description, base_price")
       .order("sort_order");
+    const services: ServiceRow[] = (servicesData ?? []) as ServiceRow[];
 
-
-    const servicesList = (services ?? [])
+    const servicesList = services
       .map(
         (s) =>
           `- id:${s.id} | "${s.name}" | ${Number(s.base_price).toLocaleString("ru-RU")} ₸${s.description ? ` | ${s.description}` : ""}`,
       )
       .join("\n");
+
 
     const systemPrompt = `Ты — опытный автомеханик-диагност автосервиса "Авто Premium" в Казахстане. Анализируй симптомы и давай чёткий ответ на русском языке.
 
