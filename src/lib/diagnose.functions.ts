@@ -24,19 +24,12 @@ export const diagnose = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data }) => {
-    try {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
-      throw new Error("Не настроен AI: нужен LOVABLE_API_KEY или GEMINI_API_KEY");
+      throw new Error("AI не настроен: добавьте LOVABLE_API_KEY или GEMINI_API_KEY");
     }
 
-
-
-
-
-
-    // Загружаем каталог услуг
     const { data: services } = await supabaseAdmin
       .from("services")
       .select("id, name, description, base_price")
@@ -51,132 +44,102 @@ export const diagnose = createServerFn({ method: "POST" })
 
     const systemPrompt = `Ты — опытный автомеханик-диагност автосервиса "Авто Premium" в Казахстане. Анализируй симптомы и давай чёткий ответ на русском языке.
 
-Доступные услуги нашего автосервиса (используй ТОЛЬКО эти id для рекомендаций):
+Доступные услуги (используй ТОЛЬКО эти id):
 ${servicesList || "(услуги ещё не добавлены)"}
 
 Правила:
-- Указывай 2-5 наиболее вероятных причин, отсортированных по вероятности
-- Рекомендуй услуги ТОЛЬКО из списка выше, используя их точные id
-- Указывай уровень срочности: low (можно отложить), medium (нужно сделать в ближайшее время), high (опасно ездить)
-- Будь конкретным, избегай общих фраз`;
+- 2-5 наиболее вероятных причин, по убыванию вероятности
+- Рекомендуй услуги ТОЛЬКО из списка выше, по их точным id
+- urgency: low / medium / high
+- Будь конкретным`;
 
-    const userPrompt = `Авто: ${data.carMake} ${data.carModel}${data.carYear ? ` ${data.carYear} г.` : ""}
-Симптомы: ${data.symptoms}`;
+    const userPrompt = `Авто: ${data.carMake} ${data.carModel}${data.carYear ? ` ${data.carYear} г.` : ""}\nСимптомы: ${data.symptoms}`;
 
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "provide_diagnosis",
-          description: "Возвращает структурированную диагностику неисправности",
-          parameters: {
+    const parameters = {
+      type: "object",
+      properties: {
+        urgency: { type: "string", enum: ["low", "medium", "high"] },
+        summary: { type: "string" },
+        causes: {
+          type: "array",
+          items: {
             type: "object",
             properties: {
-              urgency: {
-                type: "string",
-                enum: ["low", "medium", "high"],
-                description: "Уровень срочности ремонта",
-              },
-              summary: {
-                type: "string",
-                description: "Краткое резюме диагноза в 1-2 предложения",
-              },
-              causes: {
-                type: "array",
-                description: "Вероятные причины неисправности",
-                items: {
-                  type: "object",
-                  properties: {
-                    title: { type: "string", description: "Название причины" },
-                    description: {
-                      type: "string",
-                      description: "Подробное объяснение причины",
-                    },
-                    probability: {
-                      type: "string",
-                      enum: ["high", "medium", "low"],
-                    },
-                  },
-                  required: ["title", "description", "probability"],
-                  additionalProperties: false,
-                },
-              },
-              recommended_service_ids: {
-                type: "array",
-                description: "ID услуг из каталога, которые мы рекомендуем",
-                items: { type: "string" },
-              },
-              advice: {
-                type: "string",
-                description: "Совет клиенту: что делать прямо сейчас",
-              },
+              title: { type: "string" },
+              description: { type: "string" },
+              probability: { type: "string", enum: ["high", "medium", "low"] },
             },
-            required: [
-              "urgency",
-              "summary",
-              "causes",
-              "recommended_service_ids",
-              "advice",
-            ],
+            required: ["title", "description", "probability"],
             additionalProperties: false,
           },
         },
+        recommended_service_ids: { type: "array", items: { type: "string" } },
+        advice: { type: "string" },
       },
-    ];
+      required: ["urgency", "summary", "causes", "recommended_service_ids", "advice"],
+      additionalProperties: false,
+    };
 
-    let result: {
+    type DiagResult = {
       urgency: "low" | "medium" | "high";
       summary: string;
-      causes: Array<{
-        title: string;
-        description: string;
-        probability: "high" | "medium" | "low";
-      }>;
+      causes: Array<{ title: string; description: string; probability: "high" | "medium" | "low" }>;
       recommended_service_ids: string[];
       advice: string;
-    } | null = null;
+    };
 
-    const diagnosisParams = tools[0].function.parameters;
+    let result: DiagResult | null = null;
 
-    // Путь 1: Lovable AI Gateway
     if (LOVABLE_API_KEY) {
-      const resp = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            tools,
-            tool_choice: {
-              type: "function",
-              function: { name: "provide_diagnosis" },
-            },
-          }),
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "provide_diagnosis",
+                description: "Возвращает структурированную диагностику",
+                parameters,
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "provide_diagnosis" } },
+        }),
+      });
 
       if (resp.ok) {
         const json = await resp.json();
-        const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-        if (args) result = JSON.parse(args);
-      } else {
-        if (resp.status === 429) throw new Error("Слишком много запросов. Попробуйте через минуту.");
-        if (resp.status === 402 && !GEMINI_API_KEY) {
-          throw new Error("Закончились кредиты AI. Пополните баланс или добавьте GEMINI_API_KEY.");
+        const args = json?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+        if (args) {
+          try {
+            result = JSON.parse(args);
+          } catch {
+            // ignore, fall through
+          }
         }
-        console.warn("Lovable AI gateway failed, trying direct Gemini:", resp.status);
+      } else if (resp.status === 429) {
+        throw new Error("Слишком много запросов. Попробуйте через минуту.");
+      } else if (resp.status === 402 && !GEMINI_API_KEY) {
+        throw new Error("Закончились кредиты AI. Пополните баланс.");
+      } else {
+        const errText = await resp.text().catch(() => "");
+        console.warn("[diagnose] Lovable AI failed:", resp.status, errText);
+        if (!GEMINI_API_KEY) {
+          throw new Error(`Lovable AI вернул ${resp.status}: ${errText.slice(0, 200) || "ошибка"}`);
+        }
       }
     }
 
-    // Путь 2: прямой Gemini API
     if (!result && GEMINI_API_KEY) {
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -189,41 +152,34 @@ ${servicesList || "(услуги ещё не добавлены)"}
             tools: [
               {
                 functionDeclarations: [
-                  {
-                    name: "provide_diagnosis",
-                    description: "Возвращает структурированную диагностику неисправности",
-                    parameters: diagnosisParams,
-                  },
+                  { name: "provide_diagnosis", description: "diag", parameters },
                 ],
               },
             ],
             toolConfig: {
-              functionCallingConfig: {
-                mode: "ANY",
-                allowedFunctionNames: ["provide_diagnosis"],
-              },
+              functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["provide_diagnosis"] },
             },
           }),
         },
       );
-
       if (!resp.ok) {
-        const text = await resp.text();
-        console.error("Gemini direct error:", resp.status, text);
-        throw new Error(`Ошибка Gemini API [${resp.status}]. Проверьте GEMINI_API_KEY.`);
+        const text = await resp.text().catch(() => "");
+        console.error("[diagnose] Gemini direct error:", resp.status, text);
+        throw new Error(`Gemini API ${resp.status}: ${text.slice(0, 200) || "ошибка"}`);
       }
       const json = await resp.json();
-      const fnCall = json.candidates?.[0]?.content?.parts?.find(
+      const fnCall = json?.candidates?.[0]?.content?.parts?.find(
         (p: { functionCall?: { args?: unknown } }) => p.functionCall,
       )?.functionCall;
       if (fnCall?.args) {
-        result = fnCall.args;
+        result = fnCall.args as DiagResult;
       }
     }
 
-    if (!result) throw new Error("AI не вернул структурированный ответ");
+    if (!result) {
+      throw new Error("AI не вернул структурированный ответ");
+    }
 
-    // Подмешиваем полные данные рекомендованных услуг
     const recommendedServices = (services ?? []).filter((s) =>
       result!.recommended_service_ids.includes(s.id),
     );
@@ -232,12 +188,4 @@ ${servicesList || "(услуги ещё не добавлены)"}
       ...result,
       recommended_services: recommendedServices,
     };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error("[diagnose] failed:", msg, e);
-      throw new Error(msg || "Неизвестная ошибка диагностики");
-    }
   });
-
-
-
