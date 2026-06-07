@@ -185,9 +185,10 @@ ${servicesList || "(услуги ещё не добавлены)"}
       throw new Error("AI не вернул структурированный ответ");
     }
 
-    const recommendedServices = (services ?? []).filter((s) =>
+    const recommendedServices = services.filter((s) =>
       result!.recommended_service_ids.includes(s.id),
     );
+
 
     return {
       ...result,
