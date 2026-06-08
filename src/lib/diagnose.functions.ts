@@ -25,9 +25,13 @@ export const diagnose = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const rawGeminiApiKey = process.env.GEMINI_API_KEY?.trim();
+    const GEMINI_API_KEY = rawGeminiApiKey?.startsWith("AIza") ? rawGeminiApiKey : undefined;
     if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
       throw new Error("AI не настроен: добавьте LOVABLE_API_KEY или GEMINI_API_KEY");
+    }
+    if (rawGeminiApiKey && !GEMINI_API_KEY) {
+      console.warn("[diagnose] Ignoring invalid GEMINI_API_KEY format. Expected key starting with AIza.");
     }
 
     type ServiceRow = { id: string; name: string; description: string | null; base_price: number };
@@ -111,7 +115,8 @@ ${servicesList || "(услуги ещё не добавлены)"}
       const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Lovable-API-Key": LOVABLE_API_KEY,
+          "X-Lovable-AIG-SDK": "manual-fetch",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
