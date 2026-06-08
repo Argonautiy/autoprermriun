@@ -30,13 +30,25 @@ export const diagnose = createServerFn({ method: "POST" })
       throw new Error("AI не настроен: добавьте LOVABLE_API_KEY или GEMINI_API_KEY");
     }
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     type ServiceRow = { id: string; name: string; description: string | null; base_price: number };
-    const { data: servicesData } = await supabaseAdmin
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      throw new Error("Backend не настроен: отсутствуют SUPABASE_URL или SUPABASE_PUBLISHABLE_KEY");
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabasePublic = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data: servicesData, error: servicesError } = await supabasePublic
       .from("services")
       .select("id, name, description, base_price")
       .order("sort_order");
+    if (servicesError) {
+      console.warn("[diagnose] Failed to load services:", servicesError.message);
+    }
     const services: ServiceRow[] = (servicesData ?? []) as ServiceRow[];
 
     const servicesList = services
